@@ -52,6 +52,7 @@
 #define __DEBUG__
 #define SCREEN_W                128 // Oled screen - wide
 #define SCREEN_H                 64 // Oled screen - high
+#define LOOP_DELAY            10000 // Delay time (ms) for every loop
 #define HUMIDITY_SENSOR          A0 // Output from humidity sensor
 #define LIGHT_SENSOR             A1 // Output from light sensor
 #define TEMPERATURE_SENSOR        5 // Output from temperature sensor
@@ -724,6 +725,14 @@ void setup() {
     while (true);
   }
 
+  // Display intro
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(10, 32);
+  display.println("SmartPlant v1.0");
+  display.display();
+  delay(3000);
 }
 
 void loop() {
@@ -755,7 +764,7 @@ void loop() {
 
   // Display picture
   displayPicture(humidity_status, light_status, temperature_status);
-  delay(10000);
+  delay(LOOP_DELAY);
 }
 
 

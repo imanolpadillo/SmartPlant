@@ -8,8 +8,9 @@
 // VERSION: 1.0
 
 // Board: Arduino Nano
-// Processor: Atmega 2560 (Mega 2560)
+// Processor: ATmega328P
 // Port: /dev/cu.wchusbserial1420
+//
 // External module: SSD1306 (OLED screen)
 //     SSD1306    |    Arduino Nano
 // __________________________________
@@ -35,6 +36,13 @@
 //     DS18B20    |    Arduino Nano
 // __________________________________
 //     DS18B20    |       D5
+//
+// External module: 3-pin switch
+//  3-pin switch  |    Arduino Nano
+// __________________________________
+//      pin-1     |       D1
+//      pin-2     |       D2
+//      pin-3     |       D3
 
 // ********************************************************************************************* //
 // INCLUDES 
@@ -50,22 +58,27 @@
 // CONSTANTS
 // ********************************************************************************************* //
 #define __DEBUG__
-#define SCREEN_W                128 // Oled screen - wide
-#define SCREEN_H                 64 // Oled screen - high
-#define LOOP_DELAY            10000 // Delay time (ms) for every loop
-#define HUMIDITY_SENSOR          A0 // Output from humidity sensor
-#define LIGHT_SENSOR             A1 // Output from light sensor
-#define TEMPERATURE_SENSOR        5 // Output from temperature sensor
-#define HUMIDITY_THRESHOLD_L    500 // Humidity sensor low threshold
-#define HUMIDITY_THRESHOLD_H    800 // Humidity sensor high threshold
-#define LIGHT_THRESHOLD_L        50 // Light sensor low threshold
-#define LIGHT_THRESHOLD_H       100 // Light sensor high threshold
-#define TEMPERATURE_THRESHOLD_L  18 // Temperature sensor low threshold
-#define TEMPERATURE_THRESHOLD_H  22 // Temperature sensor high threshold
-#define SENSOR_STATUS_L           0 // Sensor status is low
-#define SENSOR_STATUS_M           1 // Sensor status is medium
-#define SENSOR_STATUS_H           2 // Sensor status is high
-
+#define SCREEN_W                           128 // Oled screen - wide
+#define SCREEN_H                            64 // Oled screen - high
+#define LOOP_DELAY                       10000 // Delay time (ms) for every loop
+#define GPIO_SWITCH_HUMIDITY                 1 // Switch pin for selecting threshold index for 
+                                               // humidty sensor
+#define GPIO_SWITCH_LIGHT                    2 // Switch pin for selecting threshold index for 
+                                               // light sensor
+#define GPIO_SWITCH_TEMPERATURE              3 // Switch pin for selecting threshold index for 
+                                               // temperature sensor
+#define GPIO_HUMIDITY_SENSOR                A0 // Output from humidity sensor
+#define GPIO_LIGHT_SENSOR                   A1 // Output from light sensor
+#define GPIO_TEMPERATURE_SENSOR              5 // Output from temperature sensor
+#define SENSOR_STATUS_L                      0 // Sensor status is low
+#define SENSOR_STATUS_M                      1 // Sensor status is medium
+#define SENSOR_STATUS_H                      2 // Sensor status is high
+const int HUMIDITY_THRESHOLD_L[] =  {500,600}; // Humidity sensor: low thresholds
+const int HUMIDITY_THRESHOLD_H[] =  {600,700}; // Humidity sensor: high thresholds
+const int LIGHT_THRESHOLD_L[] =       {50,60}; // Light sensor: low thresholds
+const int LIGHT_THRESHOLD_H[] =       {80,90}; // Light sensor: high thresholds
+const int TEMPERATURE_THRESHOLD_L[] = {18,20}; // Temperature sensor: low thresholds
+const int TEMPERATURE_THRESHOLD_H[] = {20,22}; // Temperature sensor: high thresholds
 
 static const unsigned char PROGMEM  image_data_SubPict_empty[128] = {
     // ∙∙∙∙∙∙∙∙∙∙∙∙∙∙∙∙∙∙∙∙∙∙∙∙∙∙∙∙∙∙
@@ -516,7 +529,7 @@ static const unsigned char PROGMEM image_data_SubPict20_light_L[128] = {
 // OBJECTS
 // ********************************************************************************************* //
 Adafruit_SSD1306 display(SCREEN_W, SCREEN_H, &Wire, -1);
-OneWire oneWireBus(TEMPERATURE_SENSOR);
+OneWire oneWireBus(GPIO_TEMPERATURE_SENSOR);
 DallasTemperature temperature(&oneWireBus);
 
 void setup() {
@@ -545,8 +558,8 @@ void setup() {
 
 void loop() {
   // Read sensors' data
-  int humidity = analogRead(HUMIDITY_SENSOR);
-  int light = analogRead(LIGHT_SENSOR);
+  int humidity = analogRead(GPIO_HUMIDITY_SENSOR);
+  int light = analogRead(GPIO_LIGHT_SENSOR);
   temperature.requestTemperatures();
 #ifdef __DEBUG__
   Serial.print("Humidity: ");
@@ -557,10 +570,30 @@ void loop() {
   Serial.println(temperature.getTempCByIndex(0));
 #endif
 
-  // Calculate sensors' status
-  int humidity_status = calculateSensorStatus(humidity, HUMIDITY_THRESHOLD_L, HUMIDITY_THRESHOLD_H);
-  int light_status = calculateSensorStatus(light, LIGHT_THRESHOLD_L, LIGHT_THRESHOLD_H);
-  int temperature_status = calculateSensorStatus(temperature.getTempCByIndex(0), TEMPERATURE_THRESHOLD_L, TEMPERATURE_THRESHOLD_H);
+  // Get sensors' thresholds
+  int humidity_threshold_index=0;
+  int light_threshold_index=0;
+  int temperature_threshold_index=0;
+  if (digitalRead(GPIO_SWITCH_HUMIDITY)==true){
+    humidity_threshold_index = 1;
+  }
+  if (digitalRead(GPIO_SWITCH_LIGHT)==true){
+    light_threshold_index = 1;
+  }
+  if (digitalRead(GPIO_SWITCH_TEMPERATURE)==true){
+    temperature_threshold_index = 1;
+  }
+
+  // Get sensors' status
+  int humidity_status = calculateSensorStatus(humidity, 
+    HUMIDITY_THRESHOLD_L[humidity_threshold_index],
+    HUMIDITY_THRESHOLD_H[humidity_threshold_index]);
+  int light_status = calculateSensorStatus(light, 
+    LIGHT_THRESHOLD_L[light_threshold_index], 
+    LIGHT_THRESHOLD_H[light_threshold_index]);
+  int temperature_status = calculateSensorStatus(temperature.getTempCByIndex(0), 
+    TEMPERATURE_THRESHOLD_L[temperature_threshold_index], 
+    TEMPERATURE_THRESHOLD_H[temperature_threshold_index]);
 #ifdef __DEBUG__
   Serial.print("; Humidity status: ");
   Serial.print(humidity_status);

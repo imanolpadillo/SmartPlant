@@ -73,8 +73,8 @@
 #define SENSOR_STATUS_L                      0 // Sensor status is low
 #define SENSOR_STATUS_M                      1 // Sensor status is medium
 #define SENSOR_STATUS_H                      2 // Sensor status is high
-const int HUMIDITY_THRESHOLD_L[] =  {500,600}; // Humidity sensor: low thresholds
-const int HUMIDITY_THRESHOLD_H[] =  {600,700}; // Humidity sensor: high thresholds
+const int HUMIDITY_THRESHOLD_L[] =  {300,500}; // Humidity sensor: low thresholds 
+const int HUMIDITY_THRESHOLD_H[] =  {700,900}; // Humidity sensor: high thresholds 
 const int LIGHT_THRESHOLD_L[] =       {50,60}; // Light sensor: low thresholds
 const int LIGHT_THRESHOLD_H[] =       {80,90}; // Light sensor: high thresholds
 const int TEMPERATURE_THRESHOLD_L[] = {18,20}; // Temperature sensor: low thresholds
@@ -558,7 +558,9 @@ void setup() {
 
 void loop() {
   // Read sensors' data
-  int humidity = analogRead(GPIO_HUMIDITY_SENSOR);
+  // humidity sensor response: 0=wet, 1023=dry. The result is toggled for
+  // an easier understanding: 1023=wet, 0=dry
+  int humidity = 1023 - analogRead(GPIO_HUMIDITY_SENSOR);
   int light = analogRead(GPIO_LIGHT_SENSOR);
   temperature.requestTemperatures();
 #ifdef __DEBUG__

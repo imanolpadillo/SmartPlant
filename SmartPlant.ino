@@ -60,7 +60,8 @@
 #define __DEBUG__
 #define SCREEN_W                           128 // Oled screen - wide
 #define SCREEN_H                            64 // Oled screen - high
-#define LOOP_DELAY                       10000 // Delay time (ms) for every loop
+#define LONG_LOOP_DELAY                  10000 // Long delay time (ms) for every loop
+#define SHORT_LOOP_DELAY                  2000 // Short delay time (ms) for every loop
 #define GPIO_SWITCH_HUMIDITY                 1 // Switch pin for selecting threshold index for 
                                                // humidty sensor
 #define GPIO_SWITCH_LIGHT                    2 // Switch pin for selecting threshold index for 
@@ -544,6 +545,10 @@ static const unsigned char PROGMEM image_data_SubPict21_temperature_H[128] = {
 Adafruit_SSD1306 display(SCREEN_W, SCREEN_H, &Wire, -1);
 OneWire oneWireBus(GPIO_TEMPERATURE_SENSOR);
 DallasTemperature temperature(&oneWireBus);
+int previous_humidity_threshold_index;
+int previous_light_threshold_index;
+int previous_temperature_threshold_index;
+
 
 void setup() {
 #ifdef __DEBUG__
@@ -582,13 +587,14 @@ void loop() {
   Serial.print("; Light: ");
   Serial.print(light);
   Serial.print("; Temperature: ");
-  Serial.println(temperature.getTempCByIndex(0));
+  Serial.print(temperature.getTempCByIndex(0));
 #endif
 
   // Get sensors' thresholds
   int humidity_threshold_index=0;
   int light_threshold_index=0;
   int temperature_threshold_index=0;
+  bool threshold_change=false;
   if (digitalRead(GPIO_SWITCH_HUMIDITY)==true){
     humidity_threshold_index = 1;
   }
@@ -597,6 +603,23 @@ void loop() {
   }
   if (digitalRead(GPIO_SWITCH_TEMPERATURE)==true){
     temperature_threshold_index = 1;
+  }
+  // Check change in threshold value
+  if ((previous_humidity_threshold_index != humidity_threshold_index) or
+  (previous_light_threshold_index != light_threshold_index) or
+  (previous_temperature_threshold_index != temperature_threshold_index)){
+    threshold_change = true;
+    previous_humidity_threshold_index = humidity_threshold_index;
+    previous_light_threshold_index = light_threshold_index;
+    previous_temperature_threshold_index = temperature_threshold_index;
+#ifdef __DEBUG__
+    Serial.print("; Humidity threshold: ");
+    Serial.print(humidity_threshold_index == 0 ? "LOW  " : "HIGH ");
+    Serial.print("; Light threshold: ");
+    Serial.print(light_threshold_index == 0 ? "LOW  " : "HIGH ");
+    Serial.print("; Temperature threshold: ");
+    Serial.print(light_threshold_index == 0 ? "LOW  " : "HIGH ");
+#endif
   }
 
   // Get sensors' status
@@ -615,17 +638,28 @@ void loop() {
   Serial.print("; Light status: ");
   Serial.print(light_status);
   Serial.print("; Temperature status: ");
-  Serial.println(temperature_status);
+  Serial.print(temperature_status);
 #endif
 
-  // Display picture
-  displayPicture(humidity_status, light_status, temperature_status);
-
-  // Write sensor values
-  writeSensorValues(humidity, light, temperature.getTempCByIndex(0), humidity_status, 
-    light_status, temperature_status);
+  if (threshold_change == false) {
+    // Display picture
+    displayPicture(humidity_status, light_status, temperature_status);
+    // Display sensor values
+    displaySensorValues(humidity, light, temperature.getTempCByIndex(0), humidity_status, 
+      light_status, temperature_status);
+    delay(LONG_LOOP_DELAY);
+  }
+  else {
+    // Display new thresholds
+    displayThresholdValues(humidity_threshold_index, light_threshold_index,
+      temperature_threshold_index);
+    delay(SHORT_LOOP_DELAY);
+  }
   
-  delay(LOOP_DELAY);
+#ifdef __DEBUG__
+  Serial.println("");
+#endif
+
 }
 
 
@@ -633,14 +667,52 @@ void loop() {
 // FUNCTIONS
 // ********************************************************************************************* //
 
-// writeSensorValues: write sensor values over SubPict0
-int writeSensorValues(int humidity, int light, int temperature, 
+// displayThresholdValues: display threshold values
+int displayThresholdValues(int humidity_threshold_index, int light_threshold_index, 
+  int temperature_threshold_index) {
+
+  // Display icons
+  display.clearDisplay();
+  display.drawBitmap(0, 0, image_data_SubPict0, 30, 64, SSD1306_WHITE);
+  display.display();
+
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+
+  // Display humidity threshold values
+  String text = "";
+  text = (humidity_threshold_index == 0 ? "LOW  " : "HIGH ");
+  text += " limit [" + String(int(HUMIDITY_THRESHOLD_L[humidity_threshold_index]*0.0978));
+  text += ", " + String(int(HUMIDITY_THRESHOLD_H[humidity_threshold_index]*0.0978)) + "]%";
+  display.setCursor(18, 6);
+  display.print(text);
+
+  // Display light threshold values
+  text = (light_threshold_index == 0 ? "LOW  " : "HIGH ");
+  text += " limit [" + String(int(LIGHT_THRESHOLD_L[light_threshold_index]*0.0978));
+  text += ", " + String(int(LIGHT_THRESHOLD_H[light_threshold_index]*0.0978)) + "]%";
+  display.setCursor(18, 27);
+  display.print(text);
+
+  // Display temperature threshold values
+  text = (temperature_threshold_index == 0 ? "LOW  " : "HIGH ");
+  text += " limit [" + String(int(TEMPERATURE_THRESHOLD_L[temperature_threshold_index]));
+  text += ", " + String(int(TEMPERATURE_THRESHOLD_H[temperature_threshold_index])) + "]";
+  display.setCursor(18, 48);
+  display.print(text);
+  display.write(167);  //degrees symbol
+
+}
+
+  
+// displaySensorValues: write sensor values over SubPict0
+int displaySensorValues(int humidity, int light, int temperature, 
   int humidity_status, int light_status, int temperature_status) {
 
   int humidity_percentage = humidity*0.0978; // 1023 is 100%
   int light_percentage = light*0.0978; // 1023 is 100%
 
-  // Write humidity data
+  // Display humidity data
   display.setTextSize(1);
   display.setTextColor(SSD1306_WHITE);
   display.setCursor(14, 6);
@@ -655,7 +727,7 @@ int writeSensorValues(int humidity, int light, int temperature,
     display.println(">");
   }
 
-  // Write light data
+  // Display light data
   display.setCursor(14, 27);
   display.print(light_percentage);
   display.println("%");
@@ -668,10 +740,10 @@ int writeSensorValues(int humidity, int light, int temperature,
     display.println(">");
   }
 
-  // Write temperature data
+  // Display temperature data
   display.setCursor(14, 48);
   display.print(temperature);
-  display.write(167);
+  display.write(167);  //degrees symbol
   if (temperature_status==SENSOR_STATUS_L) {
     display.setCursor(18, 57);
     display.println("<");
@@ -683,6 +755,7 @@ int writeSensorValues(int humidity, int light, int temperature,
   
   display.display();
 }
+
 
 // calculateSensorStatus: calculates if sensor data is in status low, medium or high.
 int calculateSensorStatus(int value, int thresholdL, int thresholdH) {

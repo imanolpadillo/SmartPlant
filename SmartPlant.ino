@@ -57,7 +57,6 @@
 #include <DallasTemperature.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
-#include <EasyBuzzer.h>
 
 // ********************************************************************************************* // 
 // CONSTANTS
@@ -577,7 +576,7 @@ void setup() {
   }
 
   // Configure GPIO
-  EasyBuzzer.setPin(GPIO_BUZZER);
+  pinMode(GPIO_BUZZER, OUTPUT);
 
   // Display intro
   display.clearDisplay();
@@ -650,7 +649,7 @@ void loop() {
     TEMPERATURE_THRESHOLD_L[temperature_threshold_index], 
     TEMPERATURE_THRESHOLD_H[temperature_threshold_index]);
 #ifdef __DEBUG__
-  Serial.print(";Humidity status: ");
+  Serial.print("Humidity status: ");
   Serial.print(humidity_status);
   Serial.print(";Light status: ");
   Serial.print(light_status);
@@ -702,8 +701,7 @@ void loop() {
 
 // activateBuzzer: activate buzzer
 void activateBuzzer(){
-  EasyBuzzer.singleBeep(BUZZER_FREQ, BUZZER_DURATION);
-  EasyBuzzer.update();
+  tone(GPIO_BUZZER, 1000, 100);
 #ifdef __DEBUG__
   Serial.print("Activate Buffer;");
 #endif

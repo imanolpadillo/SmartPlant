@@ -7,12 +7,12 @@
 // DATE:    30/10/2022
 // VERSION: 1.0
 
-// Board: Arduino Nano
-// Processor: ATmega328P
+// Board: Arduino Pro Micro
+// Processor: AtMega32U4
 // Port: /dev/cu.wchusbserial1420
 //
 // External module: SSD1306 (OLED screen)
-//     SSD1306    |    Arduino Nano
+//     SSD1306    | Arduino Pro Micro
 // __________________________________
 //        SDA     |       A4
 //        SCL     |       A5
@@ -20,7 +20,7 @@
 //        GND     |      GND
 //
 // External module: FC-28 (Humidity sensor)
-//      FC-28     |    Arduino Nano
+//      FC-28     | Arduino Pro Micro
 // __________________________________
 //        A0      |       A0
 //        D0      |       --
@@ -28,21 +28,25 @@
 //        GND     |      GND
 //
 // External module: LDR (light sensor)
-//       LDR      |    Arduino Nano
+//       LDR      | Arduino Pro Micro
 // __________________________________
 //       LDR      |       A1
 //
 // External module: DS18B20 (temperature sensor)
-//     DS18B20    |    Arduino Nano
+//     DS18B20    | Arduino Pro Micro
 // __________________________________
 //     DS18B20    |       D5
 //
 // External module: 3-pin switch
-//  3-pin switch  |    Arduino Nano
+//  3-pin switch  | Arduino Pro Micro
 // __________________________________
 //      pin-1     |       D1
 //      pin-2     |       D2
 //      pin-3     |       D3
+// External module: buzzer
+//      buzzer    | Arduino Pro Micro
+// __________________________________
+//      buzzer    |       D4
 
 // ********************************************************************************************* //
 // INCLUDES 
@@ -53,6 +57,7 @@
 #include <DallasTemperature.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+#include <EasyBuzzer.h>
 
 // ********************************************************************************************* // 
 // CONSTANTS
@@ -62,18 +67,24 @@
 #define SCREEN_H                            64 // Oled screen - high
 #define LONG_LOOP_DELAY                  10000 // Long delay time (ms) for every loop
 #define SHORT_LOOP_DELAY                  2000 // Short delay time (ms) for every loop
+#define LOOP_COUNTER_LIMIT                 360 // Buzzer will be activated if no water every
+                                               // LOOP_COUNTER_LIMIT x LONG_LOOP_DELAY seconds
 #define GPIO_SWITCH_HUMIDITY                 1 // Switch pin for selecting threshold index for 
                                                // humidty sensor
 #define GPIO_SWITCH_LIGHT                    2 // Switch pin for selecting threshold index for 
                                                // light sensor
 #define GPIO_SWITCH_TEMPERATURE              3 // Switch pin for selecting threshold index for 
                                                // temperature sensor
+#define GPIO_BUZZER                          4 // Buzzer
 #define GPIO_HUMIDITY_SENSOR                A0 // Output from humidity sensor
 #define GPIO_LIGHT_SENSOR                   A1 // Output from light sensor
 #define GPIO_TEMPERATURE_SENSOR              5 // Output from temperature sensor
 #define SENSOR_STATUS_L                      0 // Sensor status is low
 #define SENSOR_STATUS_M                      1 // Sensor status is medium
 #define SENSOR_STATUS_H                      2 // Sensor status is high
+#define BUZZER_FREQ                       1000 // Buzzer frequency
+#define BUZZER_DURATION                    200 // Buzzer duration (ms)
+
 const int HUMIDITY_THRESHOLD_L[] =  {300,500}; // Humidity sensor: low thresholds 
 const int HUMIDITY_THRESHOLD_H[] =  {700,900}; // Humidity sensor: high thresholds 
 const int LIGHT_THRESHOLD_L[] =     {300,500}; // Light sensor: low thresholds
@@ -548,6 +559,7 @@ DallasTemperature temperature(&oneWireBus);
 int previous_humidity_threshold_index;
 int previous_light_threshold_index;
 int previous_temperature_threshold_index;
+int loop_counter = 0;
 
 
 void setup() {
@@ -563,6 +575,9 @@ void setup() {
 #endif
     while (true);
   }
+
+  // Configure GPIO
+  EasyBuzzer.setPin(GPIO_BUZZER);
 
   // Display intro
   display.clearDisplay();
@@ -584,10 +599,11 @@ void loop() {
 #ifdef __DEBUG__
   Serial.print("Humidity: ");
   Serial.print(humidity);
-  Serial.print("; Light: ");
+  Serial.print(";Light: ");
   Serial.print(light);
-  Serial.print("; Temperature: ");
+  Serial.print(";Temperature: ");
   Serial.print(temperature.getTempCByIndex(0));
+  Serial.print(";");
 #endif
 
   // Get sensors' thresholds
@@ -613,12 +629,13 @@ void loop() {
     previous_light_threshold_index = light_threshold_index;
     previous_temperature_threshold_index = temperature_threshold_index;
 #ifdef __DEBUG__
-    Serial.print("; Humidity threshold: ");
+    Serial.print("Humidity threshold: ");
     Serial.print(humidity_threshold_index == 0 ? "LOW  " : "HIGH ");
-    Serial.print("; Light threshold: ");
+    Serial.print(";Light threshold: ");
     Serial.print(light_threshold_index == 0 ? "LOW  " : "HIGH ");
-    Serial.print("; Temperature threshold: ");
+    Serial.print(";Temperature threshold: ");
     Serial.print(light_threshold_index == 0 ? "LOW  " : "HIGH ");
+    Serial.print(";");
 #endif
   }
 
@@ -633,14 +650,16 @@ void loop() {
     TEMPERATURE_THRESHOLD_L[temperature_threshold_index], 
     TEMPERATURE_THRESHOLD_H[temperature_threshold_index]);
 #ifdef __DEBUG__
-  Serial.print("; Humidity status: ");
+  Serial.print(";Humidity status: ");
   Serial.print(humidity_status);
-  Serial.print("; Light status: ");
+  Serial.print(";Light status: ");
   Serial.print(light_status);
-  Serial.print("; Temperature status: ");
+  Serial.print(";Temperature status: ");
   Serial.print(temperature_status);
+  Serial.print(";");
 #endif
 
+  // Display info in oled
   if (threshold_change == false) {
     // Display picture
     displayPicture(humidity_status, light_status, temperature_status);
@@ -655,6 +674,20 @@ void loop() {
       temperature_threshold_index);
     delay(SHORT_LOOP_DELAY);
   }
+
+  // Activate buzzer if no water
+  if (humidity_status == SENSOR_STATUS_L) {
+    if (loop_counter >= LOOP_COUNTER_LIMIT){
+      activateBuzzer();
+      loop_counter = 0;
+    }
+    else{
+      loop_counter += 1;
+    }
+  }
+  else{
+    loop_counter = 0;
+  }
   
 #ifdef __DEBUG__
   Serial.println("");
@@ -667,8 +700,18 @@ void loop() {
 // FUNCTIONS
 // ********************************************************************************************* //
 
+// activateBuzzer: activate buzzer
+void activateBuzzer(){
+  EasyBuzzer.singleBeep(BUZZER_FREQ, BUZZER_DURATION);
+  EasyBuzzer.update();
+#ifdef __DEBUG__
+  Serial.print("Activate Buffer;");
+#endif
+}
+
+
 // displayThresholdValues: display threshold values
-int displayThresholdValues(int humidity_threshold_index, int light_threshold_index, 
+void displayThresholdValues(int humidity_threshold_index, int light_threshold_index, 
   int temperature_threshold_index) {
 
   // Display icons
@@ -706,7 +749,7 @@ int displayThresholdValues(int humidity_threshold_index, int light_threshold_ind
 
   
 // displaySensorValues: write sensor values over SubPict0
-int displaySensorValues(int humidity, int light, int temperature, 
+void displaySensorValues(int humidity, int light, int temperature, 
   int humidity_status, int light_status, int temperature_status) {
 
   int humidity_percentage = humidity*0.0978; // 1023 is 100%

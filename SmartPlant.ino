@@ -7,15 +7,14 @@
 // DATE:    30/10/2022
 // VERSION: 1.0
 
-// Board: Arduino Pro Micro
+// Board: Arduino Pro Micro (Leonardo)
 // Processor: AtMega32U4
-// Port: /dev/cu.wchusbserial1420
 //
 // External module: SSD1306 (OLED screen)
 //     SSD1306    | Arduino Pro Micro
 // __________________________________
-//        SDA     |       A4
-//        SCL     |       A5
+//        SDA     |       D2    (grey)
+//        SCL     |       D3
 //        Vcc     |       5V
 //        GND     |      GND
 //
@@ -40,9 +39,9 @@
 // External module: 3-pin switch
 //  3-pin switch  | Arduino Pro Micro
 // __________________________________
-//      pin-1     |       D1
-//      pin-2     |       D2
-//      pin-3     |       D3
+//      pin-1     |       D6
+//      pin-2     |       D7
+//      pin-3     |       D8
 // External module: buzzer
 //      buzzer    | Arduino Pro Micro
 // __________________________________
@@ -65,14 +64,14 @@
 #define SCREEN_W                           128 // Oled screen - wide
 #define SCREEN_H                            64 // Oled screen - high
 #define LONG_LOOP_DELAY                  10000 // Long delay time (ms) for every loop
-#define SHORT_LOOP_DELAY                  2000 // Short delay time (ms) for every loop
+#define SHORT_LOOP_DELAY                  5000 // Short delay time (ms) for every loop
 #define LOOP_COUNTER_LIMIT                 360 // Buzzer will be activated if no water every
                                                // LOOP_COUNTER_LIMIT x LONG_LOOP_DELAY seconds
-#define GPIO_SWITCH_HUMIDITY                 1 // Switch pin for selecting threshold index for 
+#define GPIO_SWITCH_HUMIDITY                 6 // Switch pin for selecting threshold index for 
                                                // humidty sensor
-#define GPIO_SWITCH_LIGHT                    2 // Switch pin for selecting threshold index for 
+#define GPIO_SWITCH_LIGHT                    7 // Switch pin for selecting threshold index for 
                                                // light sensor
-#define GPIO_SWITCH_TEMPERATURE              3 // Switch pin for selecting threshold index for 
+#define GPIO_SWITCH_TEMPERATURE              8 // Switch pin for selecting threshold index for 
                                                // temperature sensor
 #define GPIO_BUZZER                          4 // Buzzer
 #define GPIO_HUMIDITY_SENSOR                A0 // Output from humidity sensor
@@ -715,7 +714,6 @@ void displayThresholdValues(int humidity_threshold_index, int light_threshold_in
   // Display icons
   display.clearDisplay();
   display.drawBitmap(0, 0, image_data_SubPict0, 30, 64, SSD1306_WHITE);
-  display.display();
 
   display.setTextSize(1);
   display.setTextColor(SSD1306_WHITE);
@@ -723,26 +721,27 @@ void displayThresholdValues(int humidity_threshold_index, int light_threshold_in
   // Display humidity threshold values
   String text = "";
   text = (humidity_threshold_index == 0 ? "LOW  " : "HIGH ");
-  text += " limit [" + String(int(HUMIDITY_THRESHOLD_L[humidity_threshold_index]*0.0978));
-  text += ", " + String(int(HUMIDITY_THRESHOLD_H[humidity_threshold_index]*0.0978)) + "]%";
+  text += " [" + String(int(HUMIDITY_THRESHOLD_L[humidity_threshold_index]*0.0978));
+  text += ", " + String(int(HUMIDITY_THRESHOLD_H[humidity_threshold_index]*0.0978)) + "] %";
   display.setCursor(18, 6);
   display.print(text);
 
   // Display light threshold values
   text = (light_threshold_index == 0 ? "LOW  " : "HIGH ");
-  text += " limit [" + String(int(LIGHT_THRESHOLD_L[light_threshold_index]*0.0978));
-  text += ", " + String(int(LIGHT_THRESHOLD_H[light_threshold_index]*0.0978)) + "]%";
+  text += " [" + String(int(LIGHT_THRESHOLD_L[light_threshold_index]*0.0978));
+  text += ", " + String(int(LIGHT_THRESHOLD_H[light_threshold_index]*0.0978)) + "] %";
   display.setCursor(18, 27);
   display.print(text);
 
   // Display temperature threshold values
   text = (temperature_threshold_index == 0 ? "LOW  " : "HIGH ");
-  text += " limit [" + String(int(TEMPERATURE_THRESHOLD_L[temperature_threshold_index]));
-  text += ", " + String(int(TEMPERATURE_THRESHOLD_H[temperature_threshold_index])) + "]";
+  text += " [" + String(int(TEMPERATURE_THRESHOLD_L[temperature_threshold_index]));
+  text += ", " + String(int(TEMPERATURE_THRESHOLD_H[temperature_threshold_index])) + "] ";
   display.setCursor(18, 48);
   display.print(text);
   display.write(167);  //degrees symbol
 
+  display.display();
 }
 
   

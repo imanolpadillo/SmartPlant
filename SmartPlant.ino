@@ -760,11 +760,11 @@ void displaySensorValues(int humidity, int light, int temperature,
   display.println("%");
   if (humidity_status==SENSOR_STATUS_L) {
     display.setCursor(18, 16);
-    display.println("<");
+    display.println("-");
   }
   else if (humidity_status==SENSOR_STATUS_H) {
     display.setCursor(18, 16);
-    display.println(">");
+    display.println("+");
   }
 
   // Display light data

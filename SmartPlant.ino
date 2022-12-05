@@ -68,11 +68,11 @@
 #define LOOP_COUNTER_LIMIT                 360 // Buzzer will be activated if no water every
                                                // LOOP_COUNTER_LIMIT x LONG_LOOP_DELAY seconds
 #define GPIO_SWITCH_HUMIDITY                 6 // Switch pin for selecting threshold index for 
-                                               // humidty sensor
+                                               // humidty sensor (orange)
 #define GPIO_SWITCH_LIGHT                    7 // Switch pin for selecting threshold index for 
-                                               // light sensor
+                                               // light sensor (blue)
 #define GPIO_SWITCH_TEMPERATURE              8 // Switch pin for selecting threshold index for 
-                                               // temperature sensor
+                                               // temperature sensor (grey)
 #define GPIO_BUZZER                          4 // Buzzer
 #define GPIO_HUMIDITY_SENSOR                A0 // Output from humidity sensor
 #define GPIO_LIGHT_SENSOR                   A1 // Output from light sensor
@@ -609,13 +609,13 @@ void loop() {
   int light_threshold_index=0;
   int temperature_threshold_index=0;
   bool threshold_change=false;
-  if (digitalRead(GPIO_SWITCH_HUMIDITY)==true){
+  if (digitalRead(GPIO_SWITCH_HUMIDITY)==false){
     humidity_threshold_index = 1;
   }
-  if (digitalRead(GPIO_SWITCH_LIGHT)==true){
+  if (digitalRead(GPIO_SWITCH_LIGHT)==false){
     light_threshold_index = 1;
   }
-  if (digitalRead(GPIO_SWITCH_TEMPERATURE)==true){
+  if (digitalRead(GPIO_SWITCH_TEMPERATURE)==false){
     temperature_threshold_index = 1;
   }
   // Check change in threshold value
@@ -632,7 +632,7 @@ void loop() {
     Serial.print(";Light threshold: ");
     Serial.print(light_threshold_index == 0 ? "LOW  " : "HIGH ");
     Serial.print(";Temperature threshold: ");
-    Serial.print(light_threshold_index == 0 ? "LOW  " : "HIGH ");
+    Serial.print(temperature_threshold_index == 0 ? "LOW  " : "HIGH ");
     Serial.print(";");
 #endif
   }

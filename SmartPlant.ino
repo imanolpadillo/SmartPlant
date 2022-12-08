@@ -683,6 +683,11 @@ void loop() {
   else{
     loop_counter = 0;
   }
+#ifdef __DEBUG__
+  Serial.print("Loop counter: ");
+  Serial.print(loop_counter);
+  Serial.print(";");
+#endif
 
   delay(LOOP_DELAY);
   

@@ -63,8 +63,7 @@
 #define __DEBUG__
 #define SCREEN_W                           128 // Oled screen - wide
 #define SCREEN_H                            64 // Oled screen - high
-#define LONG_LOOP_DELAY                  10000 // Long delay time (ms) for every loop
-#define SHORT_LOOP_DELAY                  5000 // Short delay time (ms) for every loop
+#define LOOP_DELAY                       10000 // Long delay time (ms) for every loop
 #define LOOP_COUNTER_LIMIT                 360 // Buzzer will be activated if no water every
                                                // LOOP_COUNTER_LIMIT x LONG_LOOP_DELAY seconds
 #define GPIO_SWITCH_HUMIDITY                 6 // Switch pin for selecting threshold index for 
@@ -85,10 +84,10 @@
 
 const int HUMIDITY_THRESHOLD_L[] =  {300,500}; // Humidity sensor: low thresholds 
 const int HUMIDITY_THRESHOLD_H[] =  {700,900}; // Humidity sensor: high thresholds 
-const int LIGHT_THRESHOLD_L[] =     {300,500}; // Light sensor: low thresholds
-const int LIGHT_THRESHOLD_H[] =     {700,900}; // Light sensor: high thresholds
+const int LIGHT_THRESHOLD_L[] =     {250,450}; // Light sensor: low thresholds
+const int LIGHT_THRESHOLD_H[] =     {650,850}; // Light sensor: high thresholds
 const int TEMPERATURE_THRESHOLD_L[] = {18,20}; // Temperature sensor: low thresholds
-const int TEMPERATURE_THRESHOLD_H[] = {20,22}; // Temperature sensor: high thresholds
+const int TEMPERATURE_THRESHOLD_H[] = {22,24}; // Temperature sensor: high thresholds
 
 static const unsigned char PROGMEM  image_data_SubPict0[272] = {
     // ∙∙∙∙∙∙∙∙∙∙∙∙∙∙∙∙∙∙∙∙∙∙∙∙∙∙∙∙∙∙
@@ -554,9 +553,9 @@ static const unsigned char PROGMEM image_data_SubPict21_temperature_H[128] = {
 Adafruit_SSD1306 display(SCREEN_W, SCREEN_H, &Wire, -1);
 OneWire oneWireBus(GPIO_TEMPERATURE_SENSOR);
 DallasTemperature temperature(&oneWireBus);
-int previous_humidity_threshold_index;
-int previous_light_threshold_index;
-int previous_temperature_threshold_index;
+int previous_humidity_threshold_index=-1;
+int previous_light_threshold_index=-1;
+int previous_temperature_threshold_index=-1;
 int loop_counter = 0;
 
 
@@ -664,13 +663,11 @@ void loop() {
     // Display sensor values
     displaySensorValues(humidity, light, temperature.getTempCByIndex(0), humidity_status, 
       light_status, temperature_status);
-    delay(LONG_LOOP_DELAY);
   }
   else {
     // Display new thresholds
     displayThresholdValues(humidity_threshold_index, light_threshold_index,
       temperature_threshold_index);
-    delay(SHORT_LOOP_DELAY);
   }
 
   // Activate buzzer if no water
@@ -686,6 +683,8 @@ void loop() {
   else{
     loop_counter = 0;
   }
+
+  delay(LOOP_DELAY);
   
 #ifdef __DEBUG__
   Serial.println("");
@@ -773,11 +772,11 @@ void displaySensorValues(int humidity, int light, int temperature,
   display.println("%");
   if (light_status==SENSOR_STATUS_L) {
     display.setCursor(18, 37);
-    display.println("<");
+    display.println("-");
   }
   else if (light_status==SENSOR_STATUS_H) {
     display.setCursor(18, 37);
-    display.println(">");
+    display.println("+");
   }
 
   // Display temperature data
@@ -786,11 +785,11 @@ void displaySensorValues(int humidity, int light, int temperature,
   display.write(167);  //degrees symbol
   if (temperature_status==SENSOR_STATUS_L) {
     display.setCursor(18, 57);
-    display.println("<");
+    display.println("-");
   }
   else if (temperature_status==SENSOR_STATUS_H) {
     display.setCursor(18, 57);
-    display.println(">");
+    display.println("+");
   }
   
   display.display();

@@ -82,10 +82,10 @@
 #define BUZZER_FREQ                       1000 // Buzzer frequency
 #define BUZZER_DURATION                    200 // Buzzer duration (ms)
 
-const int HUMIDITY_THRESHOLD_L[] =  {300,500}; // Humidity sensor: low thresholds 
-const int HUMIDITY_THRESHOLD_H[] =  {700,900}; // Humidity sensor: high thresholds 
-const int LIGHT_THRESHOLD_L[] =     {250,450}; // Light sensor: low thresholds
-const int LIGHT_THRESHOLD_H[] =     {650,850}; // Light sensor: high thresholds
+const int HUMIDITY_THRESHOLD_L[] =    {30,50}; // Humidity sensor (%): low thresholds 
+const int HUMIDITY_THRESHOLD_H[] =    {70,90}; // Humidity sensor (%): high thresholds 
+const int LIGHT_THRESHOLD_L[] =       {25,45}; // Light sensor (%): low thresholds
+const int LIGHT_THRESHOLD_H[] =       {65,85}; // Light sensor (%): high thresholds
 const int TEMPERATURE_THRESHOLD_L[] = {18,20}; // Temperature sensor: low thresholds
 const int TEMPERATURE_THRESHOLD_H[] = {22,24}; // Temperature sensor: high thresholds
 
@@ -590,17 +590,17 @@ void loop() {
   // Read sensors' data
   // humidity sensor response: 0=wet, 1023=dry. The result is toggled for
   // an easier understanding: 1023=wet, 0=dry
-  int humidity = 1023 - analogRead(GPIO_HUMIDITY_SENSOR);
-  int light = analogRead(GPIO_LIGHT_SENSOR);
+  int humidity = (1023 - analogRead(GPIO_HUMIDITY_SENSOR))*0.0978; // 1023 is 100%
+  int light = analogRead(GPIO_LIGHT_SENSOR)*0.0978; // 1023 is 100%
   temperature.requestTemperatures();
 #ifdef __DEBUG__
   Serial.print("Humidity: ");
   Serial.print(humidity);
-  Serial.print(";Light: ");
+  Serial.print("%;Light: ");
   Serial.print(light);
-  Serial.print(";Temperature: ");
+  Serial.print("%;Temperature: ");
   Serial.print(temperature.getTempCByIndex(0));
-  Serial.print(";");
+  Serial.print("°;");
 #endif
 
   // Get sensors' thresholds
@@ -720,15 +720,15 @@ void displayThresholdValues(int humidity_threshold_index, int light_threshold_in
   // Display humidity threshold values
   String text = "";
   text = (humidity_threshold_index == 0 ? "LOW  " : "HIGH ");
-  text += " [" + String(int(HUMIDITY_THRESHOLD_L[humidity_threshold_index]*0.0978));
-  text += ", " + String(int(HUMIDITY_THRESHOLD_H[humidity_threshold_index]*0.0978)) + "] %";
+  text += " [" + String(int(HUMIDITY_THRESHOLD_L[humidity_threshold_index]));
+  text += ", " + String(int(HUMIDITY_THRESHOLD_H[humidity_threshold_index])) + "] %";
   display.setCursor(18, 6);
   display.print(text);
 
   // Display light threshold values
   text = (light_threshold_index == 0 ? "LOW  " : "HIGH ");
-  text += " [" + String(int(LIGHT_THRESHOLD_L[light_threshold_index]*0.0978));
-  text += ", " + String(int(LIGHT_THRESHOLD_H[light_threshold_index]*0.0978)) + "] %";
+  text += " [" + String(int(LIGHT_THRESHOLD_L[light_threshold_index]));
+  text += ", " + String(int(LIGHT_THRESHOLD_H[light_threshold_index])) + "] %";
   display.setCursor(18, 27);
   display.print(text);
 
@@ -745,11 +745,8 @@ void displayThresholdValues(int humidity_threshold_index, int light_threshold_in
 
   
 // displaySensorValues: write sensor values over SubPict0
-void displaySensorValues(int humidity, int light, int temperature, 
+void displaySensorValues(int humidity_percentage, int light_percentage, int temperature, 
   int humidity_status, int light_status, int temperature_status) {
-
-  int humidity_percentage = humidity*0.0978; // 1023 is 100%
-  int light_percentage = light*0.0978; // 1023 is 100%
 
   // Display humidity data
   display.setTextSize(1);

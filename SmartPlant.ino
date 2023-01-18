@@ -18,11 +18,10 @@
 //        Vcc     |       5V
 //        GND     |      GND
 //
-// External module: FC-28 (Humidity sensor)
+// External module: (Humidity sensor)
 //      FC-28     | Arduino Pro Micro
 // __________________________________
 //        A0      |       A0
-//        D0      |       --
 //        Vcc     |       5V
 //        GND     |      GND
 //
@@ -61,33 +60,35 @@
 // CONSTANTS
 // ********************************************************************************************* //
 #define __DEBUG__
-#define SCREEN_W                           128 // Oled screen - wide
-#define SCREEN_H                            64 // Oled screen - high
-#define LOOP_DELAY                       10000 // Long delay time (ms) for every loop
-#define LOOP_COUNTER_LIMIT                 360 // Buzzer will be activated if no water every
-                                               // LOOP_COUNTER_LIMIT x LONG_LOOP_DELAY seconds
-#define GPIO_SWITCH_HUMIDITY                 6 // Switch pin for selecting threshold index for 
-                                               // humidty sensor (orange)
-#define GPIO_SWITCH_LIGHT                    7 // Switch pin for selecting threshold index for 
-                                               // light sensor (blue)
-#define GPIO_SWITCH_TEMPERATURE              8 // Switch pin for selecting threshold index for 
-                                               // temperature sensor (grey)
-#define GPIO_BUZZER                          4 // Buzzer
-#define GPIO_HUMIDITY_SENSOR                A0 // Output from humidity sensor
-#define GPIO_LIGHT_SENSOR                   A1 // Output from light sensor
-#define GPIO_TEMPERATURE_SENSOR              5 // Output from temperature sensor
-#define SENSOR_STATUS_L                      0 // Sensor status is low
-#define SENSOR_STATUS_M                      1 // Sensor status is medium
-#define SENSOR_STATUS_H                      2 // Sensor status is high
-#define BUZZER_FREQ                       1000 // Buzzer frequency
-#define BUZZER_DURATION                    200 // Buzzer duration (ms)
+#define SCREEN_W                                128 // Oled screen - wide
+#define SCREEN_H                                 64 // Oled screen - high
+#define LOOP_DELAY                            10000 // Long delay time (ms) for every loop
+#define LOOP_COUNTER_LIMIT                      360 // Buzzer will be activated if no water every
+                                                    // LOOP_COUNTER_LIMIT x LONG_LOOP_DELAY seconds
+#define GPIO_SWITCH_HUMIDITY                      6 // Switch pin for selecting threshold index for 
+                                                    // humidty sensor (orange)
+#define GPIO_SWITCH_LIGHT                         7 // Switch pin for selecting threshold index for 
+                                                    // light sensor (blue)
+#define GPIO_SWITCH_TEMPERATURE                   8 // Switch pin for selecting threshold index for 
+                                                    // temperature sensor (grey)
+#define GPIO_BUZZER                               4 // Buzzer
+#define GPIO_HUMIDITY_SENSOR                     A0 // Output from humidity sensor
+#define GPIO_LIGHT_SENSOR                        A1 // Output from light sensor
+#define GPIO_TEMPERATURE_SENSOR                   5 // Output from temperature sensor
+#define SENSOR_STATUS_L                           0 // Sensor status is low
+#define SENSOR_STATUS_M                           1 // Sensor status is medium
+#define SENSOR_STATUS_H                           2 // Sensor status is high
+#define BUZZER_FREQ                            1000 // Buzzer frequency
+#define BUZZER_DURATION                         200 // Buzzer duration (ms)
 
-const int HUMIDITY_THRESHOLD_L[] =    {30,50}; // Humidity sensor (%): low thresholds 
-const int HUMIDITY_THRESHOLD_H[] =    {70,90}; // Humidity sensor (%): high thresholds 
-const int LIGHT_THRESHOLD_L[] =       {25,45}; // Light sensor (%): low thresholds
-const int LIGHT_THRESHOLD_H[] =       {65,85}; // Light sensor (%): high thresholds
-const int TEMPERATURE_THRESHOLD_L[] = {18,20}; // Temperature sensor: low thresholds
-const int TEMPERATURE_THRESHOLD_H[] = {22,24}; // Temperature sensor: high thresholds
+const int HUMIDITY_CALIBRATED_LIMITS[] = {512,200}; // Humidity sensor: dry and wet values
+const int HUMIDITY_THRESHOLD_L[] =         {40,50}; // Humidity sensor (%): low thresholds 
+const int HUMIDITY_THRESHOLD_H[] =         {70,80}; // Humidity sensor (%): high thresholds 
+const int LIGHT_THRESHOLD_L[] =            {25,45}; // Light sensor (%): low thresholds
+const int LIGHT_THRESHOLD_H[] =            {65,85}; // Light sensor (%): high thresholds
+const float TEMPERATURE_OFFSET =                 0; // Temperature sensor: offset degrees
+const int TEMPERATURE_THRESHOLD_L[] =      {18,20}; // Temperature sensor: low thresholds
+const int TEMPERATURE_THRESHOLD_H[] =      {22,24}; // Temperature sensor: high thresholds
 
 static const unsigned char PROGMEM  image_data_SubPict0[272] = {
     // ∙∙∙∙∙∙∙∙∙∙∙∙∙∙∙∙∙∙∙∙∙∙∙∙∙∙∙∙∙∙
@@ -588,18 +589,28 @@ void setup() {
 
 void loop() {
   // Read sensors' data
-  // humidity sensor response: 0=wet, 1023=dry. The result is toggled for
-  // an easier understanding: 1023=wet, 0=dry
-  int humidity = (1023 - analogRead(GPIO_HUMIDITY_SENSOR))*0.0978; // 1023 is 100%
+  // humidity sensor response: HUMIDITY_CALIBRATED_LIMITS[0] = dry (eg. 512)
+  //                           HUMIDITY_CALIBRATED_LIMITS[1] = wet (eg. 200)
+  float humidity_raw_1 = (analogRead(GPIO_HUMIDITY_SENSOR)-HUMIDITY_CALIBRATED_LIMITS[1]);
+  float humidity_raw_2 = (HUMIDITY_CALIBRATED_LIMITS[0]-HUMIDITY_CALIBRATED_LIMITS[1]);
+  float humidity_raw = (1 - humidity_raw_1/humidity_raw_2)*100;
+  int humidity = humidity_raw;
+  if (humidity > 100) {
+    humidity = 100;
+  }else if (humidity < 0) {
+    humidity = 0;
+  }
   int light = analogRead(GPIO_LIGHT_SENSOR)*0.0978; // 1023 is 100%
   temperature.requestTemperatures();
-#ifdef __DEBUG__
+#ifdef __DEBUG__  
+  //Serial.print("Humidity_raw: ");
+  //Serial.print(analogRead(GPIO_HUMIDITY_SENSOR));
   Serial.print("Humidity: ");
   Serial.print(humidity);
   Serial.print("%;Light: ");
   Serial.print(light);
   Serial.print("%;Temperature: ");
-  Serial.print(temperature.getTempCByIndex(0));
+  Serial.print(temperature.getTempCByIndex(0) - TEMPERATURE_OFFSET);
   Serial.print("°;");
 #endif
 
@@ -643,7 +654,7 @@ void loop() {
   int light_status = calculateSensorStatus(light, 
     LIGHT_THRESHOLD_L[light_threshold_index], 
     LIGHT_THRESHOLD_H[light_threshold_index]);
-  int temperature_status = calculateSensorStatus(temperature.getTempCByIndex(0), 
+  int temperature_status = calculateSensorStatus(temperature.getTempCByIndex(0) - TEMPERATURE_OFFSET, 
     TEMPERATURE_THRESHOLD_L[temperature_threshold_index], 
     TEMPERATURE_THRESHOLD_H[temperature_threshold_index]);
 #ifdef __DEBUG__
@@ -661,7 +672,7 @@ void loop() {
     // Display picture
     displayPicture(humidity_status, light_status, temperature_status);
     // Display sensor values
-    displaySensorValues(humidity, light, temperature.getTempCByIndex(0), humidity_status, 
+    displaySensorValues(humidity, light, temperature.getTempCByIndex(0) - TEMPERATURE_OFFSET, humidity_status, 
       light_status, temperature_status);
   }
   else {

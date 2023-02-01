@@ -82,8 +82,8 @@
 #define BUZZER_DURATION                         200 // Buzzer duration (ms)
 
 const int HUMIDITY_CALIBRATED_LIMITS[] = {512,200}; // Humidity sensor: dry and wet values
-const int HUMIDITY_THRESHOLD_L[] =         {40,50}; // Humidity sensor (%): low thresholds 
-const int HUMIDITY_THRESHOLD_H[] =         {70,80}; // Humidity sensor (%): high thresholds 
+const int HUMIDITY_THRESHOLD_L[] =         {50,60}; // Humidity sensor (%): low thresholds 
+const int HUMIDITY_THRESHOLD_H[] =         {75,85}; // Humidity sensor (%): high thresholds 
 const int LIGHT_THRESHOLD_L[] =            {25,45}; // Light sensor (%): low thresholds
 const int LIGHT_THRESHOLD_H[] =            {65,85}; // Light sensor (%): high thresholds
 const float TEMPERATURE_OFFSET =                 0; // Temperature sensor: offset degrees
